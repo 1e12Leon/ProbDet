@@ -2,8 +2,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 from torchvision.transforms import Resize
-from nets.backbone import Backbone, Block, Conv, SiLU, Transition, autopad
-from utils.attentions import se_block, cbam_block, eca_block, EPSABlock, PSAModule
+from yolov7.nets.backbone import Backbone, Block, Conv, SiLU, Transition, autopad
+from yolov7.utils.attentions import se_block, cbam_block, eca_block, EPSABlock, PSAModule
 
 attention_bocks = [se_block, cbam_block, eca_block, PSAModule]
 

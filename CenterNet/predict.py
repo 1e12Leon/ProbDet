@@ -83,7 +83,7 @@ if __name__ == "__main__":
         while True:
             img = input('Input image filename:')
             try:
-                image = Image.open(dir_origin_path)
+                image = Image.open(img)
             except:
                 print('Open Error! Try again!')
                 continue

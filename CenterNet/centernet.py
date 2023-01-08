@@ -7,10 +7,10 @@ import torch
 import torch.backends.cudnn as cudnn
 from PIL import ImageDraw, ImageFont
 
-from nets.centernet import CenterNet_HourglassNet, CenterNet_Resnet50,CenterNet_yolov7
-from utils.utils import (cvtColor, get_classes, preprocess_input, resize_image,
+from CenterNet.nets.centernet import CenterNet_HourglassNet, CenterNet_Resnet50,CenterNet_yolov7
+from CenterNet.utils.utils import (cvtColor, get_classes, preprocess_input, resize_image,
                          show_config)
-from utils.utils_bbox import decode_bbox, postprocess
+from CenterNet.utils.utils_bbox import decode_bbox, postprocess
 
 
 #--------------------------------------------#
@@ -30,21 +30,21 @@ class CenterNet(object):
         #   验证集损失较低不代表mAP较高，仅代表该权值在验证集上泛化性能较好。
         #   如果出现shape不匹配，同时要注意训练时的model_path和classes_path参数的修改
         #--------------------------------------------------------------------------#
-        "model_path"        : r"D:\xiangmushiyan\centernet-pytorch-main\logs\loss_2022_10_18_21_51_40-yolov7-rgb\best_epoch_weights.pth",
-        "classes_path"      : r'model_data/people_classes.txt',
+        "model_path"        : r"D:\Deep_Learning_folds\ProbEn\CenterNet\model_data\centernet_resnet50_voc.pth",
+        "classes_path"      : r'D:\Deep_Learning_folds\ProbEn\CenterNet\model_data\people_classes.txt',
         #--------------------------------------------------------------------------#
         #   用于选择所使用的模型的主干
         #   resnet50, hourglass
         #--------------------------------------------------------------------------#
-        "backbone"          : 'yolov7_brackbone',
+        "backbone"          : 'resnet50',
         #--------------------------------------------------------------------------#
         #   输入图片的大小，设置成32的倍数
         #--------------------------------------------------------------------------#
-        "input_shape"       : [512, 512],
+        "input_shape"       : [640, 640],
         #--------------------------------------------------------------------------#
         #   只有得分大于置信度的预测框会被保留下来
         #--------------------------------------------------------------------------#
-        "confidence"        : 0.3,
+        "confidence"        : 0.5,
         #---------------------------------------------------------------------#
         #   非极大抑制所用到的nms_iou大小
         #---------------------------------------------------------------------#
@@ -477,4 +477,94 @@ class CenterNet(object):
             f.write("%s %s %s %s %s %s\n" % (predicted_class, score[:6], str(int(left)), str(int(top)), str(int(right)),str(int(bottom))))
 
         f.close()
-        return 
+        return
+
+    # ---------------------------------------------------#
+    #   检测图片
+    # ---------------------------------------------------#
+    def detect_image_dets(self, image):
+        # ---------------------------------------------------#
+        #   计算输入图片的高和宽
+        # ---------------------------------------------------#
+        image_shape = np.array(np.shape(image)[0:2])
+        # ---------------------------------------------------------#
+        #   在这里将图像转换成RGB图像，防止灰度图在预测时报错。
+        #   代码仅仅支持RGB图像的预测，所有其它类型的图像都会转化成RGB
+        # ---------------------------------------------------------#
+        image = cvtColor(image)
+        # ---------------------------------------------------------#
+        #   给图像增加灰条，实现不失真的resize
+        #   也可以直接resize进行识别
+        # ---------------------------------------------------------#
+        image_data = resize_image(image, (self.input_shape[1], self.input_shape[0]), self.letterbox_image)
+        # -----------------------------------------------------------#
+        #   图片预处理，归一化。获得的photo的shape为[1, 512, 512, 3]
+        # -----------------------------------------------------------#
+        image_data = np.expand_dims(np.transpose(preprocess_input(np.array(image_data, dtype='float32')), (2, 0, 1)), 0)
+
+        with torch.no_grad():
+            images = torch.from_numpy(np.asarray(image_data)).type(torch.FloatTensor)
+            if self.cuda:
+                images = images.cuda()
+            # ---------------------------------------------------------#
+            #   将图像输入网络当中进行预测！
+            # ---------------------------------------------------------#
+            outputs = self.net(images)
+            if self.backbone == 'hourglass':
+                outputs = [outputs[-1]["hm"].sigmoid(), outputs[-1]["wh"], outputs[-1]["reg"]]
+            # -----------------------------------------------------------#
+            #   利用预测结果进行解码
+            # -----------------------------------------------------------#
+            outputs = decode_bbox(outputs[0], outputs[1], outputs[2], self.confidence, self.cuda)
+
+            # -------------------------------------------------------#
+            #   对于centernet网络来讲，确立中心非常重要。
+            #   对于大目标而言，会存在许多的局部信息。
+            #   此时对于同一个大目标，中心点比较难以确定。
+            #   使用最大池化的非极大抑制方法无法去除局部框
+            #   所以我还是写了另外一段对框进行非极大抑制的代码
+            #   实际测试中，hourglass为主干网络时有无额外的nms相差不大，resnet相差较大。
+            # -------------------------------------------------------#
+            results = postprocess(outputs, self.nms, image_shape, self.input_shape, self.letterbox_image, self.nms_iou)
+
+            # --------------------------------------#
+            #   如果没有检测到物体，则返回原图
+            # --------------------------------------#
+            if results[0] is None:
+                return image
+
+            top_label = np.array(results[0][:, 5], dtype='int32')
+            top_conf = results[0][:, 4]
+            top_boxes = results[0][:, :4]
+
+        # ---------------------------------------------------------#
+        #   设置字体与边框厚度
+        # ---------------------------------------------------------#
+        font = ImageFont.truetype(font='model_data/simhei.ttf',
+                                  size=np.floor(3e-2 * np.shape(image)[1] + 0.5).astype('int32'))
+        thickness = max((np.shape(image)[0] + np.shape(image)[1]) // self.input_shape[0], 1)
+        dets = []
+        # ---------------------------------------------------------#
+        #   图像绘制
+        # ---------------------------------------------------------#
+        for i, c in list(enumerate(top_label)):
+            predicted_class = self.class_names[int(c)]
+            box = top_boxes[i]
+            score = top_conf[i]
+
+            top, left, bottom, right = box
+
+            top = max(0, np.floor(top).astype('float32'))
+            left = max(0, np.floor(left).astype('float32'))
+            bottom = min(image.size[1], np.floor(bottom).astype('float32'))
+            right = min(image.size[0], np.floor(right).astype('float32'))
+
+            label = '{} {:.2f}'.format(predicted_class, score)
+            draw = ImageDraw.Draw(image)
+            label_size = draw.textsize(label, font)
+            label = label.encode('utf-8')
+            # print(top, left, bottom, right, score)
+            dets.append([top, left, bottom, right, score])
+
+        # print(dets)
+        return dets

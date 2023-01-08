@@ -3,8 +3,8 @@ import math
 import torch.nn as nn
 from torch import nn
 
-from nets.hourglass import *
-from nets.resnet50 import resnet50, resnet50_Decoder, resnet50_Head,yolov7
+from CenterNet.nets.hourglass import *
+from CenterNet.nets.resnet50 import resnet50, resnet50_Decoder, resnet50_Head,yolov7
 
 
 class CenterNet_Resnet50(nn.Module):

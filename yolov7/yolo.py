@@ -7,10 +7,10 @@ import torch
 import torch.nn as nn
 from PIL import ImageDraw, ImageFont
 
-from nets.yolo import YoloBody
-from utils.utils import (cvtColor, get_anchors, get_classes, preprocess_input,
+from yolov7.nets.yolo import YoloBody
+from yolov7.utils.utils import (cvtColor, get_anchors, get_classes, preprocess_input,
                          resize_image, show_config)
-from utils.utils_bbox import DecodeBox
+from yolov7.utils.utils_bbox import DecodeBox
 
 
 class YOLO(object):
@@ -23,13 +23,13 @@ class YOLO(object):
         #   验证集损失较低不代表mAP较高，仅代表该权值在验证集上泛化性能较好。
         #   如果出现shape不匹配，同时要注意训练时的model_path和classes_path参数的修改
         #--------------------------------------------------------------------------#
-        "model_path"        : 'model_data/yolov7_weights.pth',
-        "classes_path"      : 'model_data/coco_classes.txt',
+        "model_path"        : r'D:\Deep_Learning_folds\ProbEn\yolov7\model_data/yolov7_weights.pth',
+        "classes_path"      : r'D:\Deep_Learning_folds\ProbEn\yolov7\model_data\coco_classes.txt',
         #---------------------------------------------------------------------#
         #   anchors_path代表先验框对应的txt文件，一般不修改。
         #   anchors_mask用于帮助代码找到对应的先验框，一般不修改。
         #---------------------------------------------------------------------#
-        "anchors_path"      : 'model_data/yolo_anchors.txt',
+        "anchors_path"      : 'D:\Deep_Learning_folds\ProbEn\yolov7\model_data/yolo_anchors.txt',
         "anchors_mask"      : [[6, 7, 8], [3, 4, 5], [0, 1, 2]],
         #---------------------------------------------------------------------#
         #   输入图片的大小，必须为32的倍数。
@@ -153,6 +153,8 @@ class YOLO(object):
             top_label   = np.array(results[0][:, 6], dtype = 'int32')
             top_conf    = results[0][:, 4] * results[0][:, 5]
             top_boxes   = results[0][:, :4]
+
+            print("bbox:", top_boxes)
         #---------------------------------------------------------#
         #   设置字体与边框厚度
         #---------------------------------------------------------#
@@ -489,5 +491,5 @@ class YOLO(object):
             # print(top, left, bottom, right, score)
             dets.append([top, left, bottom, right, score])
 
-        print(dets)
+        # print(dets)
         return dets
