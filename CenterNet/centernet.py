@@ -30,7 +30,7 @@ class CenterNet(object):
         #   验证集损失较低不代表mAP较高，仅代表该权值在验证集上泛化性能较好。
         #   如果出现shape不匹配，同时要注意训练时的model_path和classes_path参数的修改
         #--------------------------------------------------------------------------#
-        "model_path"        : r"D:\Deep_Learning_folds\ProbEn\CenterNet\model_data\centernet_resnet50_voc.pth",
+        "model_path"        : r"D:\Deep_Learning_folds\ProbEn\CenterNet\model_data\centernet_voc4.pth",
         "classes_path"      : r'D:\Deep_Learning_folds\ProbEn\CenterNet\model_data\people_classes.txt',
         #--------------------------------------------------------------------------#
         #   用于选择所使用的模型的主干
@@ -48,7 +48,7 @@ class CenterNet(object):
         #---------------------------------------------------------------------#
         #   非极大抑制所用到的nms_iou大小
         #---------------------------------------------------------------------#
-        "nms_iou"           : 0.3,
+        "nms_iou"           : 0.2,
         #--------------------------------------------------------------------------#
         #   是否进行非极大抑制，可以根据检测效果自行选择
         #   backbone为resnet50时建议设置为True、backbone为hourglass时建议设置为False
@@ -180,7 +180,7 @@ class CenterNet(object):
             top_label   = np.array(results[0][:, 5], dtype = 'int32')
             top_conf    = results[0][:, 4]
             top_boxes   = results[0][:, :4]
-
+            # print(top_boxes)
         #---------------------------------------------------------#
         #   设置字体与边框厚度
         #---------------------------------------------------------#
@@ -242,6 +242,7 @@ class CenterNet(object):
                 text_origin = np.array([left, top + 1])
 
             for i in range(thickness):
+                # print([left + i, top + i, right - i, bottom - i])
                 draw.rectangle([left + i, top + i, right - i, bottom - i], outline=self.colors[c])
             draw.rectangle([tuple(text_origin), tuple(text_origin + label_size)], fill=self.colors[c])
             draw.text(text_origin, str(label,'UTF-8'), fill=(0, 0, 0), font=font)
@@ -564,7 +565,7 @@ class CenterNet(object):
             label_size = draw.textsize(label, font)
             label = label.encode('utf-8')
             # print(top, left, bottom, right, score)
-            dets.append([top, left, bottom, right, score])
+            dets.append([top, left, bottom, right, score, int(c)])
 
         # print(dets)
         return dets

@@ -23,13 +23,13 @@ class YOLO(object):
         #   验证集损失较低不代表mAP较高，仅代表该权值在验证集上泛化性能较好。
         #   如果出现shape不匹配，同时要注意训练时的model_path和classes_path参数的修改
         #--------------------------------------------------------------------------#
-        "model_path"        : r'D:\Deep_Learning_folds\ProbEn\yolov7\model_data/yolov7_weights.pth',
-        "classes_path"      : r'D:\Deep_Learning_folds\ProbEn\yolov7\model_data\coco_classes.txt',
+        "model_path"        : r'D:\Deep_Learning_folds\ProbEn\yolov7\model_data\yolov7_voc4.pth',
+        "classes_path"      : r'D:\Deep_Learning_folds\ProbEn\yolov7\model_data\voc_classes.txt',
         #---------------------------------------------------------------------#
         #   anchors_path代表先验框对应的txt文件，一般不修改。
         #   anchors_mask用于帮助代码找到对应的先验框，一般不修改。
         #---------------------------------------------------------------------#
-        "anchors_path"      : 'D:\Deep_Learning_folds\ProbEn\yolov7\model_data/yolo_anchors.txt',
+        "anchors_path"      : r'D:\Deep_Learning_folds\ProbEn\yolov7\model_data\yolo_anchors.txt',
         "anchors_mask"      : [[6, 7, 8], [3, 4, 5], [0, 1, 2]],
         #---------------------------------------------------------------------#
         #   输入图片的大小，必须为32的倍数。
@@ -489,7 +489,7 @@ class YOLO(object):
             label_size = draw.textsize(label, font)
             label = label.encode('utf-8')
             # print(top, left, bottom, right, score)
-            dets.append([top, left, bottom, right, score])
+            dets.append([top, left, bottom, right, score, int(c)])
 
         # print(dets)
         return dets
