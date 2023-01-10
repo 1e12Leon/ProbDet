@@ -33,3 +33,5 @@ if __name__ == '__main__':
         r_image.show()
         dets_centernet = centernet.detect_image_dets(image)
         print(dets_centernet)
+
+        ##cn参与
