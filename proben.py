@@ -247,7 +247,7 @@ if __name__ == '__main__':
     else:
         print("------------------------------------------")
         print("yolov7:")
-        dets_yolo = np.asarray(yolo.detect_image_dets(image))
+        dets_yolo, scores_yolo = np.asarray(yolo.detect_image_dets(image))
         # print(dets_yolo)
 
         print("------------------------------------------")
@@ -298,11 +298,16 @@ if __name__ == '__main__':
         #   置信度融合
         # ----------------------------#
         """
-        未完成，需要获取每个类别的概率
+        未完成，需要获取每个类别的概率 
         """
-        print(scores)
-        # out_score = bayesian_fusion_multiclass(scores, classes)
-        # print(out_score)
+        score1 = [scores[0], 1-scores[0]]
+        score2 = [scores[1], 1-scores[1]]
+        scores_temp = [score1, score2]
+        class_temp = int(classes[0])
+        print(scores_temp)
+        print(classes)
+        out_score = bayesian_fusion_multiclass(scores_temp, class_temp)
+        print(out_score)
 
     """bboxs = [[474, 255, 917, 1363], [473, 252, 910, 1353]]
     scores = [0.71, 0.61]

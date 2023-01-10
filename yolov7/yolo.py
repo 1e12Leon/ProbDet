@@ -143,10 +143,10 @@ class YOLO(object):
             #---------------------------------------------------------#
             #   将预测框进行堆叠，然后进行非极大抑制
             #---------------------------------------------------------#
-            # print(outputs)
-            results = self.bbox_util.non_max_suppression(torch.cat(outputs, 1), self.num_classes, self.input_shape, 
+            # print("outputs[0]:", outputs[0])
+            results = self.bbox_util.non_max_suppression(torch.cat(outputs, 1), self.num_classes, self.input_shape,
                         image_shape, self.letterbox_image, conf_thres = self.confidence, nms_thres = self.nms_iou)
-            # print(results[0])
+            # print("results[0]:", results[0])
             if results[0] is None: 
                 return image
 
@@ -154,7 +154,7 @@ class YOLO(object):
             top_conf    = results[0][:, 4] * results[0][:, 5]
             top_boxes   = results[0][:, :4]
 
-            print("bbox:", top_boxes)
+            # print("bbox:", top_boxes)
         #---------------------------------------------------------#
         #   设置字体与边框厚度
         #---------------------------------------------------------#
@@ -452,7 +452,7 @@ class YOLO(object):
             #   将预测框进行堆叠，然后进行非极大抑制
             # ---------------------------------------------------------#
             # print(outputs)
-            results = self.bbox_util.non_max_suppression(torch.cat(outputs, 1), self.num_classes, self.input_shape,
+            results, scores = self.bbox_util.non_max_suppression2(torch.cat(outputs, 1), self.num_classes, self.input_shape,
                                                          image_shape, self.letterbox_image, conf_thres=self.confidence,
                                                          nms_thres=self.nms_iou)
             # print(results[0])
@@ -492,4 +492,4 @@ class YOLO(object):
             dets.append([top, left, bottom, right, score, int(c)])
 
         # print(dets)
-        return dets
+        return dets, scores
