@@ -54,7 +54,7 @@ def iou(bb_test, bb_gt):
 def associate_detections_to_trackers(detections, trackers, iou_threshold=0.3):
     """
     将检测框bbox与卡尔曼滤波器的跟踪框进行关联匹配
-    :param detections:通过yoloV3得到的检测结果框
+    :param detections:通过yolo得到的检测结果框
     :param trackers:通过卡尔曼滤波器得到的预测结果跟踪目标框
     :param iou_threshold:大于IOU阈值则认为是同一个目标则匹配成功将其保留，小于IOU阈值则认为不是同一个目标则未成功匹配将其删除。
     :return:跟踪成功目标的矩阵：matchs。即前后帧都存在的目标，并且匹配成功同时大于iou阈值。
@@ -63,7 +63,7 @@ def associate_detections_to_trackers(detections, trackers, iou_threshold=0.3):
             跟踪失败即离开画面的目标矩阵：unmatched_trackers。
                             离开画面的目标指的就是存在于trackers预测结果跟踪目标框当中，但不存在于detections检测结果框当中。
     """
-    """
+    """ 
     1.跟踪器链(列表)：
         实际就是多个的卡尔曼滤波KalmanBoxTracker自定义类的实例对象组成的列表。
         每个目标框都有对应的一个卡尔曼滤波器(KalmanBoxTracker实例对象)，
@@ -263,7 +263,9 @@ if __name__ == '__main__':
     # ---------------------------------------------------#
     boxs1 = dets_yolo[:, :4]
     boxs2 = dets_centernet[:, :4]
-    # print(box1)
+    print(boxs1)
+    print(boxs2)
+
     scores1 = dets_yolo[:, 4]
     scores2 = dets_centernet[:, 4]
     # print(scores1)
@@ -274,6 +276,33 @@ if __name__ == '__main__':
     # ---------------------------------------------------#
     #   两个检测器的检测结果匹配
     # ---------------------------------------------------#
+    matches, unmatched_detection1, unmatched_detection2 = associate_detections_to_trackers(boxs1, boxs2)
+
+    # ---------------------------------------------------#
+    #   ProbEn融合
+    # ---------------------------------------------------#
+    """
+    目前只支持二者匹配，错检漏检还未完成
+    """
+    dets = []
+    for index in matches:
+        # ----------------------------#
+        #   bbox融合
+        # ----------------------------#
+        bboxs = [boxs1[index[0]], boxs2[index[1]]]
+        scores = [scores1[index[0]], scores2[index[1]]]
+        classes = [classes1[index[0]], classes2[index[1]]]
+        out_box = weighted_box_fusion(bboxs, scores)
+        # print(out_box)
+        # ----------------------------#
+        #   置信度融合
+        # ----------------------------#
+        """
+        未完成，需要获取每个类别的概率
+        """
+        print(scores)
+        # out_score = bayesian_fusion_multiclass(scores, classes)
+        # print(out_score)
 
     """bboxs = [[474, 255, 917, 1363], [473, 252, 910, 1353]]
     scores = [0.71, 0.61]
