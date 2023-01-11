@@ -1,5 +1,4 @@
-
-import numpy as np
+import time
 from PIL import Image, ImageDraw, ImageFont
 
 from scipy.optimize import linear_sum_assignment
@@ -237,9 +236,10 @@ if __name__ == '__main__':
     yolo = YOLO()
     crop = False
     count = False
-
+    voc_classes = ['dog', 'person', 'cat', 'car']
     # img = input('Input image filename:')
     img = '1.jpeg'
+    t1 = time.time()
     try:
         image = Image.open(img)
     except:
@@ -247,14 +247,33 @@ if __name__ == '__main__':
     else:
         print("------------------------------------------")
         print("yolov7:")
-        dets_yolo, scores_yolo = np.asarray(yolo.detect_image_dets(image))
+        t2 = time.time()
+        dets_yolo, scores_yolo = yolo.detect_image_dets(image)
+        dets_yolo = np.asarray(dets_yolo)
+        scores_yolo = np.asarray(scores_yolo)
+        t_yolo = time.time() - t2
+        print("yolo时间:", t_yolo)
         # print(dets_yolo)
+        # print(scores_yolo)
 
         print("------------------------------------------")
         print("centernet:")
-        dets_centernet = np.asarray(centernet.detect_image_dets(image))
+        t3 = time.time()
+        dets_centernet, scores_centernet = centernet.detect_image_dets(image)
+        dets_centernet = np.asarray(dets_centernet)
+        scores_centernet = np.asarray(scores_centernet)
+        t_center = time.time() - t3
+        print("centernet时间:", t_center)
         # print(dets_centernet)
+        # print(scores_centernet)
 
+    # ---------------------------------------------------#
+    #   绘制初始化
+    # ---------------------------------------------------#
+    draw = ImageDraw.Draw(image)
+    thickness = int(max((image.size[0] + image.size[1]) // np.mean([640, 640]), 1))  # 厚度
+    font = ImageFont.truetype(font=r'D:\Deep_Learning_folds\ProbEn\yolov7\model_data\simhei.ttf',
+                              size=np.floor(3e-2 * image.size[1] + 0.5).astype('int32'))
     # ---------------------------------------------------#
     #   获取ProbEn输入：
     #   boxs：预测框
@@ -263,8 +282,8 @@ if __name__ == '__main__':
     # ---------------------------------------------------#
     boxs1 = dets_yolo[:, :4]
     boxs2 = dets_centernet[:, :4]
-    print(boxs1)
-    print(boxs2)
+    # print(boxs1)
+    # print(boxs2)
 
     scores1 = dets_yolo[:, 4]
     scores2 = dets_centernet[:, 4]
@@ -276,8 +295,10 @@ if __name__ == '__main__':
     # ---------------------------------------------------#
     #   两个检测器的检测结果匹配
     # ---------------------------------------------------#
+    t4 = time.time()
     matches, unmatched_detection1, unmatched_detection2 = associate_detections_to_trackers(boxs1, boxs2)
-
+    t_match = time.time()-t4
+    print("匹配时间:", t_match)
     # ---------------------------------------------------#
     #   ProbEn融合
     # ---------------------------------------------------#
@@ -297,62 +318,25 @@ if __name__ == '__main__':
         # ----------------------------#
         #   置信度融合
         # ----------------------------#
-        """
-        未完成，需要获取每个类别的概率 
-        """
-        score1 = [scores[0], 1-scores[0]]
-        score2 = [scores[1], 1-scores[1]]
-        scores_temp = [score1, score2]
-        class_temp = int(classes[0])
-        print(scores_temp)
-        print(classes)
-        out_score = bayesian_fusion_multiclass(scores_temp, class_temp)
-        print(out_score)
+        scores_vec = [scores_yolo[index[0]], scores_centernet[index[1]]]
+        # print(classes[0])
+        pred_class = int(classes[0])
+        out_score = bayesian_fusion_multiclass(scores_vec, pred_class)
+        # print(out_score)
 
-    """bboxs = [[474, 255, 917, 1363], [473, 252, 910, 1353]]
-    scores = [0.71, 0.61]
-    out_box = weighted_box_fusion(np.asarray(bboxs), np.asarray(scores))
-    print(out_box)
-    # [ 12.97468354  14.46202532 229.02531646 240.51265823]
-
-    match_score_vec = [[0.29, 0.71], [0.39, 0.61]]
-    pred_class = 1
-    # num_cls = 3
-    out_score = bayesian_fusion_multiclass(np.asarray(match_score_vec), pred_class)
-    print(out_score)
-    # 0.9488533245339055"""
-
-    """img1 = 'img/1.jpg'
-    image = Image.open(img1)
-    draw = ImageDraw.Draw(image)
-    thickness = int(max((image.size[0] + image.size[1]) // np.mean([640, 640]), 1))  # 厚度
-    # print(thickness)
-    text_origin = np.array([255 + 5, 473 + 1])
-    font = ImageFont.truetype(font='model_data/simhei.ttf', size=np.floor(3e-2 * image.size[1] + 0.5).astype('int32'))
-    draw.rectangle([252 + thickness, 473 + thickness, 1353 - thickness, 910 - thickness], outline='red', width=3)
-    draw.text(text_origin, str(0.71), fill=(0, 0, 0), font=font)
-    image.save('img/det1.jpg')
-
-
-    img2 = 'img/1.jpg'
-    image = Image.open(img2)
-    draw = ImageDraw.Draw(image)
-    thickness = int(max((image.size[0] + image.size[1]) // np.mean([640, 640]), 1))  # 厚度
-    # print(thickness)
-    text_origin = np.array([252 + 5, 474 + 1])
-    font = ImageFont.truetype(font='model_data/simhei.ttf', size=np.floor(3e-2 * image.size[1] + 0.5).astype('int32'))
-    draw.rectangle([255 + thickness, 474 + thickness, 1363 - thickness, 917 - thickness], outline='green', width=3)
-    draw.text(text_origin, str(0.61), fill=(0, 0, 0), font=font)
-    image.save('img/det2.jpg')
-
-
-    img3 = 'img/1.jpg'
-    image = Image.open(img3)
-    draw = ImageDraw.Draw(image)
-    thickness = int(max((image.size[0] + image.size[1]) // np.mean([640, 640]), 1))  # 厚度
-    # print(thickness)
-    text_origin = np.array([253.61363636 + 5, 473.53787879 + 1])
-    font = ImageFont.truetype(font='model_data/simhei.ttf', size=np.floor(3e-2 * image.size[1] + 0.5).astype('int32'))
-    draw.rectangle([253.61363636 + thickness, 473.53787879 + thickness, 1358.37878788 - thickness, 913.76515152 - thickness], outline='blue', width=3)
-    draw.text(text_origin, str(0.88), fill=(0, 0, 0), font=font)
-    image.save('img/fusion.jpg')"""
+        top, left, bottom, right = out_box
+        dets.append([top, left, bottom, right, out_score, pred_class])
+        print("dets:", [top, left, bottom, right, out_score, pred_class])
+        # ----------------------------#
+        #   绘制目标
+        # ----------------------------#
+        label = '{} {:.2f}'.format(voc_classes[pred_class], out_score)
+        label_size = draw.textsize(label, font)
+        label = label.encode('utf-8')
+        text_origin = np.array([left, top + 1])
+        draw.rectangle([left + thickness, top + thickness, right - thickness, bottom - thickness], outline='green', width=2)
+        draw.rectangle([tuple(text_origin), tuple(text_origin + label_size)], fill='green')
+        draw.text(text_origin, str(label, 'UTF-8'), fill=(0, 0, 0), font=font)
+    t_all = time.time() - t1
+    print("总时间:", t_all)
+    # image.show()

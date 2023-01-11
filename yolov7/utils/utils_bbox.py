@@ -222,7 +222,7 @@ class DecodeBox():
                 # print("detections:", detections[keep])
                 max_detections = detections_class[keep]
                 max_detections2 = detections_class2[keep]
-                print("max_detections2:", max_detections2)
+                # print("max_detections2:", max_detections2)
                 scores_temp = []
                 for k in range(num_classes):
                     score = float((max_detections2[:, 4] * max_detections2[:, 5 + k]).cpu())

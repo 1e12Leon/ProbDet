@@ -6,7 +6,7 @@
       <excludeFolder url="file://$MODULE_DIR$/yolov7/VOCdevkit" />
       <excludeFolder url="file://$MODULE_DIR$/CenterNet/model_data" />
     </content>
-    <orderEntry type="jdk" jdkName="Python 3.6 (pytorch) (2)" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="Python 3.8 (facenet-retinaface-pytorch-main)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
   <component name="PyDocumentationSettings">
