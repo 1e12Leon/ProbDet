@@ -1,3 +1,4 @@
+import colorsys
 import time
 from PIL import Image, ImageDraw, ImageFont
 
@@ -234,109 +235,203 @@ def weighted_box_fusion(bbox, score):
 if __name__ == '__main__':
     centernet = CenterNet()
     yolo = YOLO()
+    #----------------------------------------------------------------------------------------------------------#
+    #   mode用于指定测试的模式：
+    #   'predict'           表示单张图片预测，如果想对预测过程进行修改，如保存图片，截取对象等，可以先看下方详细的注释
+    #   'video'             表示视频检测，可调用摄像头或者视频进行检测，详情查看下方注释。
+    #   'fps'               表示测试fps，使用的图片是img里面的street.jpg，详情查看下方注释。
+    #   'dir_predict'       表示遍历文件夹进行检测并保存。默认遍历img文件夹，保存img_out文件夹，详情查看下方注释。
+    #----------------------------------------------------------------------------------------------------------#
+    mode = "predict"
+    #-------------------------------------------------------------------------#
+    #   crop                指定了是否在单张图片预测后对目标进行截取
+    #   count               指定了是否进行目标的计数
+    #   crop、count仅在mode='predict'时有效
+    #-------------------------------------------------------------------------#
     crop = False
     count = False
     voc_classes = ['dog', 'person', 'cat', 'car']
-    # img = input('Input image filename:')
-    img = '1.jpeg'
-    t1 = time.time()
-    try:
-        image = Image.open(img)
-    except:
-        print('Open Error! Try again!')
-    else:
-        print("------------------------------------------")
-        print("yolov7:")
-        t2 = time.time()
-        dets_yolo, scores_yolo = yolo.detect_image_dets(image)
-        dets_yolo = np.asarray(dets_yolo)
-        scores_yolo = np.asarray(scores_yolo)
-        t_yolo = time.time() - t2
-        print("yolo时间:", t_yolo)
-        # print(dets_yolo)
-        # print(scores_yolo)
+    num_classes = len(voc_classes)
+    # ---------------------------------------------------#
+    #   画框设置不同的颜色
+    # ---------------------------------------------------#
+    hsv_tuples = [(x / num_classes, 1., 1.) for x in range(num_classes)]
+    colors = list(map(lambda x: colorsys.hsv_to_rgb(*x), hsv_tuples))
+    colors = list(map(lambda x: (int(x[0] * 255), int(x[1] * 255), int(x[2] * 255)), colors))
 
-        print("------------------------------------------")
-        print("centernet:")
-        t3 = time.time()
-        dets_centernet, scores_centernet = centernet.detect_image_dets(image)
-        dets_centernet = np.asarray(dets_centernet)
-        scores_centernet = np.asarray(scores_centernet)
-        t_center = time.time() - t3
-        print("centernet时间:", t_center)
-        # print(dets_centernet)
-        # print(scores_centernet)
+    if mode == 'predict':
+        # img = input('Input image filename:')
+        img = 'D:\Deep_Learning_folds\ProbEn\yolov7\img\street.jpg'
+        try:
+            image = Image.open(img)
+        except:
+            print('Open Error! Try again!')
+        else:
+            print("------------------------------------------")
+            print("yolov7:")
+            dets_yolo, scores_yolo = yolo.detect_image_dets(image)
+            dets_yolo = np.asarray(dets_yolo)
+            scores_yolo = np.asarray(scores_yolo)
+            # print(dets_yolo)
+            # print(scores_yolo)
 
-    # ---------------------------------------------------#
-    #   绘制初始化
-    # ---------------------------------------------------#
-    draw = ImageDraw.Draw(image)
-    thickness = int(max((image.size[0] + image.size[1]) // np.mean([640, 640]), 1))  # 厚度
-    font = ImageFont.truetype(font=r'D:\Deep_Learning_folds\ProbEn\yolov7\model_data\simhei.ttf',
-                              size=np.floor(3e-2 * image.size[1] + 0.5).astype('int32'))
-    # ---------------------------------------------------#
-    #   获取ProbEn输入：
-    #   boxs：预测框
-    #   scores：置信度
-    #   classes：预测类别索引
-    # ---------------------------------------------------#
-    boxs1 = dets_yolo[:, :4]
-    boxs2 = dets_centernet[:, :4]
-    # print(boxs1)
-    # print(boxs2)
+            print("------------------------------------------")
+            print("centernet:")
+            dets_centernet, scores_centernet = centernet.detect_image_dets(image)
+            dets_centernet = np.asarray(dets_centernet)
+            scores_centernet = np.asarray(scores_centernet)
+            # print(dets_centernet)
+            # print(scores_centernet)
 
-    scores1 = dets_yolo[:, 4]
-    scores2 = dets_centernet[:, 4]
-    # print(scores1)
-    classes1 = dets_yolo[:, 5]  # 索引需要转换为int
-    classes2 = dets_centernet[:, 5]
-    # print(classes1[0])
+        # ---------------------------------------------------#
+        #   绘制初始化
+        # ---------------------------------------------------#
+        draw = ImageDraw.Draw(image)
+        thickness = int(max((image.size[0] + image.size[1]) // np.mean([640, 640]), 1))  # 厚度
+        font = ImageFont.truetype(font=r'D:\Deep_Learning_folds\ProbEn\yolov7\model_data\simhei.ttf',
+                                  size=np.floor(3e-2 * image.size[1] + 0.5).astype('int32'))
+        # ---------------------------------------------------#
+        #   获取ProbEn输入：
+        #   boxs：预测框
+        #   scores：置信度
+        #   classes：预测类别索引
+        # ---------------------------------------------------#
+        boxs1 = dets_yolo[:, :4]
+        boxs2 = dets_centernet[:, :4]
+        # print(boxs1)
+        # print(boxs2)
 
-    # ---------------------------------------------------#
-    #   两个检测器的检测结果匹配
-    # ---------------------------------------------------#
-    t4 = time.time()
-    matches, unmatched_detection1, unmatched_detection2 = associate_detections_to_trackers(boxs1, boxs2)
-    t_match = time.time()-t4
-    print("匹配时间:", t_match)
-    # ---------------------------------------------------#
-    #   ProbEn融合
-    # ---------------------------------------------------#
-    """
-    目前只支持二者匹配，错检漏检还未完成
-    """
-    dets = []
-    for index in matches:
-        # ----------------------------#
-        #   bbox融合
-        # ----------------------------#
-        bboxs = [boxs1[index[0]], boxs2[index[1]]]
-        scores = [scores1[index[0]], scores2[index[1]]]
-        classes = [classes1[index[0]], classes2[index[1]]]
-        out_box = weighted_box_fusion(bboxs, scores)
-        # print(out_box)
-        # ----------------------------#
-        #   置信度融合
-        # ----------------------------#
-        scores_vec = [scores_yolo[index[0]], scores_centernet[index[1]]]
-        # print(classes[0])
-        pred_class = int(classes[0])
-        out_score = bayesian_fusion_multiclass(scores_vec, pred_class)
-        # print(out_score)
+        scores1 = dets_yolo[:, 4]
+        scores2 = dets_centernet[:, 4]
+        # print(scores1)
+        # print(scores2)
+        classes1 = dets_yolo[:, 5]  # 索引需要转换为int
+        classes2 = dets_centernet[:, 5]
+        # print(classes1)
+        # print(classes2)
 
-        top, left, bottom, right = out_box
-        dets.append([top, left, bottom, right, out_score, pred_class])
-        print("dets:", [top, left, bottom, right, out_score, pred_class])
-        # ----------------------------#
-        #   绘制目标
-        # ----------------------------#
-        label = '{} {:.2f}'.format(voc_classes[pred_class], out_score)
-        label_size = draw.textsize(label, font)
-        label = label.encode('utf-8')
-        text_origin = np.array([left, top + 1])
-        draw.rectangle([left + thickness, top + thickness, right - thickness, bottom - thickness], outline='green', width=2)
-        draw.rectangle([tuple(text_origin), tuple(text_origin + label_size)], fill='green')
-        draw.text(text_origin, str(label, 'UTF-8'), fill=(0, 0, 0), font=font)
-    t_all = time.time() - t1
-    print("总时间:", t_all)
-    # image.show()
+        # ---------------------------------------------------#
+        #   两个检测器的检测结果匹配
+        # ---------------------------------------------------#
+        matches, unmatched_detection1, unmatched_detection2 = associate_detections_to_trackers(boxs1, boxs2)
+
+        # ---------------------------------------------------#
+        #   ProbEn融合
+        #   只有一个检测器检测到: 直接使用结果，即绘制两个unmatched_detection，无需融合
+        #   两个检测器都检测到，但类别不同，需要在matches处理过程中判断，无需融合
+        # ---------------------------------------------------#
+
+        dets = []
+        # ---------------------------------------------------#
+        #   处理二者匹配到的目标(matches)
+        # ---------------------------------------------------#
+        for index in matches:
+            # ----------------------------#
+            #   bbox融合
+            # ----------------------------#
+            bboxs = [boxs1[index[0]], boxs2[index[1]]]
+            scores = [scores1[index[0]], scores2[index[1]]]
+            classes = [classes1[index[0]], classes2[index[1]]]
+            # ----------------------------#
+            #   两个检测器类别不同的情况
+            # ----------------------------#
+            if classes[0] != classes[1]:
+                if scores[0] >= scores[1]:
+                    out_box = bboxs[0]
+                    out_score = scores[0]
+                    pred_class = classes[0]
+                else:
+                    out_box = bboxs[1]
+                    out_score = scores[1]
+                    pred_class = int(classes[1])
+
+                top, left, bottom, right = out_box
+                dets.append([top, left, bottom, right, out_score, pred_class])
+                print("dets:", [top, left, bottom, right, out_score, pred_class])
+                # ----------------------------#
+                #   绘制目标
+                # ----------------------------#
+                label = '{} {:.2f}'.format(voc_classes[pred_class], out_score)
+                label_size = draw.textsize(label, font)
+                label = label.encode('utf-8')
+                text_origin = np.array([left, top + 1])
+                draw.rectangle([left + thickness, top + thickness, right - thickness, bottom - thickness],
+                               outline=colors[pred_class], width=2)
+                draw.rectangle([tuple(text_origin), tuple(text_origin + label_size)], fill=colors[pred_class])
+                draw.text(text_origin, str(label, 'UTF-8'), fill=(0, 0, 0), font=font)
+                continue
+
+            out_box = weighted_box_fusion(bboxs, scores)
+            # print(bboxs[0])
+            # print(out_box)
+            # ----------------------------#
+            #   置信度融合
+            # ----------------------------#
+            scores_vec = [scores_yolo[index[0]], scores_centernet[index[1]]]
+            # print(classes[0])
+            pred_class = int(classes[0])
+            # print(scores_vec[0], scores_vec[1])
+            out_score = bayesian_fusion_multiclass(scores_vec, pred_class)
+            # print(out_score)
+
+            top, left, bottom, right = out_box
+            dets.append([top, left, bottom, right, out_score, pred_class])
+            print("dets:", [top, left, bottom, right, out_score, pred_class])
+            # ----------------------------#
+            #   绘制目标
+            # ----------------------------#
+            label = '{} {:.2f}'.format(voc_classes[pred_class], out_score)
+            label_size = draw.textsize(label, font)
+            label = label.encode('utf-8')
+            text_origin = np.array([left, top + 1])
+            draw.rectangle([left + thickness, top + thickness, right - thickness, bottom - thickness], outline=colors[pred_class], width=2)
+            draw.rectangle([tuple(text_origin), tuple(text_origin + label_size)], fill=colors[pred_class])
+            draw.text(text_origin, str(label, 'UTF-8'), fill=(0, 0, 0), font=font)
+
+
+        # ---------------------------------------------------#
+        #   处理unmatched_detection1
+        # ---------------------------------------------------#
+        for index1 in unmatched_detection1:
+            out_box = boxs1[index1]
+            out_score = scores1[index1]
+            pred_class = int(classes1[index1])
+            top, left, bottom, right = out_box
+            dets.append([top, left, bottom, right, out_score, pred_class])
+            print("dets:", [top, left, bottom, right, out_score, pred_class])
+            # ----------------------------#
+            #   绘制目标
+            # ----------------------------#
+            label = '{} {:.2f}'.format(voc_classes[pred_class], out_score)
+            label_size = draw.textsize(label, font)
+            label = label.encode('utf-8')
+            text_origin = np.array([left, top + 1])
+            draw.rectangle([left + thickness, top + thickness, right - thickness, bottom - thickness], outline=colors[pred_class],
+                           width=2)
+            draw.rectangle([tuple(text_origin), tuple(text_origin + label_size)], fill=colors[pred_class])
+            draw.text(text_origin, str(label, 'UTF-8'), fill=(0, 0, 0), font=font)
+        # ---------------------------------------------------#
+        #   处理unmatched_detection2
+        # ---------------------------------------------------#
+        for index2 in unmatched_detection2:
+            out_box = boxs1[index2]
+            out_score = scores1[index2]
+            pred_class = int(classes1[index2])
+            top, left, bottom, right = out_box
+            dets.append([top, left, bottom, right, out_score, pred_class])
+            print("dets:", [top, left, bottom, right, out_score, pred_class])
+            # ----------------------------#
+            #   绘制目标
+            # ----------------------------#
+            label = '{} {:.2f}'.format(voc_classes[pred_class], out_score)
+            label_size = draw.textsize(label, font)
+            label = label.encode('utf-8')
+            text_origin = np.array([left, top + 1])
+            draw.rectangle([left + thickness, top + thickness, right - thickness, bottom - thickness], outline=colors[pred_class],
+                           width=2)
+            draw.rectangle([tuple(text_origin), tuple(text_origin + label_size)], fill=colors[pred_class])
+            draw.text(text_origin, str(label, 'UTF-8'), fill=(0, 0, 0), font=font)
+
+        image.show()
+    elif mode == 'video':
+        pass

@@ -223,12 +223,18 @@ class DecodeBox():
                 max_detections = detections_class[keep]
                 max_detections2 = detections_class2[keep]
                 # print("max_detections2:", max_detections2)
-                scores_temp = []
-                for k in range(num_classes):
-                    score = float((max_detections2[:, 4] * max_detections2[:, 5 + k]).cpu())
-                    scores_temp.append(score)
+
+                for max_detection2 in max_detections2:
+                    max_detection2 = torch.unsqueeze(max_detection2, 0)
+                    scores_temp = []
+                    for k in range(num_classes):
+                        # print(max_detections2[:, 4] * max_detections2[:, 5 + k])
+                        score = float((max_detection2[:, 4] * max_detection2[:, 5 + k]).cpu())
+                        # print(score)
+                        scores_temp.append(score)
+                    scores.append(scores_temp)
                 # print(scores_temp)
-                scores.append(scores_temp)
+
                 # # 按照存在物体的置信度排序
                 # _, conf_sort_index = torch.sort(detections_class[:, 4]*detections_class[:, 5], descending=True)
                 # detections_class = detections_class[conf_sort_index]

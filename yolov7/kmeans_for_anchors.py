@@ -100,7 +100,7 @@ def load_data(path):
             xmax = np.float64(xmax)
             ymax = np.float64(ymax)
             # 得到宽高
-            data.append([xmax-xmin,ymax-ymin])
+            data.append([xmax-xmin, ymax-ymin])
     return np.array(data)
 
 if __name__ == '__main__':

@@ -14,24 +14,25 @@ if __name__ == '__main__':
     count = False
 
     # img = input('Input image filename:')
-    img = '1.jpeg'
+    img = 'D:\Deep_Learning_folds\ProbEn\yolov7\img\street.jpg'
     try:
-        image = Image.open(img)
+        image1 = Image.open(img)
+        image2 = Image.open(img)
     except:
         print('Open Error! Try again!')
     else:
         print("-----------------")
         print("yolov7:")
-        r_image = yolo.detect_image(image, crop=crop, count=count)
+        r_image = yolo.detect_image(image1, crop=crop, count=count)
         r_image.show()
-        dets_yolo, scores_yolo = yolo.detect_image_dets(image)
-        print(dets_yolo)
+        # dets_yolo, scores_yolo = yolo.detect_image_dets(image1)
+        # print(dets_yolo)
         # print(scores_yolo)
 
         print("-----------------")
         print("centernet:")
-        # r_image = centernet.detect_image(image, crop = crop, count=count)
-        # r_image.show()
-        dets_centernet, scores_centernet = centernet.detect_image_dets(image)
-        print(dets_centernet)
+        r_image2 = centernet.detect_image(image2, crop = crop, count=count)
+        r_image2.show()
+        # dets_centernet, scores_centernet = centernet.detect_image_dets(image2)
+        # print(dets_centernet)
         #print(scores_centernet)
