@@ -69,7 +69,7 @@ def decode_bbox(pred_hms, pred_whs, pred_offsets, confidence, cuda):
         pred_wh_mask        = pred_wh[mask]
         pred_offset_mask    = pred_offset[mask]
         if len(pred_wh_mask) == 0:
-            detects.append()
+            detects.append([])
             continue
 
         #----------------------------------------#

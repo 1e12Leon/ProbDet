@@ -539,19 +539,16 @@ class CenterNet(object):
             # --------------------------------------#
             #   如果没有检测到物体，则返回原图
             # --------------------------------------#
+            scores0 = []
+            dets0 = []
             if results[0] is None:
-                return image
+                print("centernet未检测到目标")
+                return dets0, scores0
 
             top_label = np.array(results[0][:, 5], dtype='int32')
             top_conf = results[0][:, 4]
             top_boxes = results[0][:, :4]
 
-        # ---------------------------------------------------------#
-        #   设置字体与边框厚度
-        # ---------------------------------------------------------#
-        font = ImageFont.truetype(font='model_data/simhei.ttf',
-                                  size=np.floor(3e-2 * np.shape(image)[1] + 0.5).astype('int32'))
-        thickness = max((np.shape(image)[0] + np.shape(image)[1]) // self.input_shape[0], 1)
         dets = []
         scores = []
         # ---------------------------------------------------------#
@@ -569,11 +566,6 @@ class CenterNet(object):
             bottom = min(image.size[1], np.floor(bottom).astype('float32'))
             right = min(image.size[0], np.floor(right).astype('float32'))
 
-            label = '{} {:.2f}'.format(predicted_class, score)
-            draw = ImageDraw.Draw(image)
-            label_size = draw.textsize(label, font)
-            label = label.encode('utf-8')
-            # print(top, left, bottom, right, score)
             dets.append([top, left, bottom, right, score, int(c)])
             score_others = 1 - score
             scores_temp = [0] * self.num_classes

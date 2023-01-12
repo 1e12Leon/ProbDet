@@ -455,19 +455,16 @@ class YOLO(object):
             results, scores = self.bbox_util.non_max_suppression2(torch.cat(outputs, 1), self.num_classes, self.input_shape,
                                                          image_shape, self.letterbox_image, conf_thres=self.confidence,
                                                          nms_thres=self.nms_iou)
-            # print(results[0])
+            scores0 = []
+            dets0 = []
             if results[0] is None:
-                return image
+                print("yolo未检测到目标")
+                return dets0, scores0
 
             top_label = np.array(results[0][:, 6], dtype='int32')
             top_conf = results[0][:, 4] * results[0][:, 5]
             top_boxes = results[0][:, :4]
-        # ---------------------------------------------------------#
-        #   设置字体与边框厚度
-        # ---------------------------------------------------------#
-        font = ImageFont.truetype(font='model_data/simhei.ttf',
-                                  size=np.floor(3e-2 * image.size[1] + 0.5).astype('int32'))
-        thickness = int(max((image.size[0] + image.size[1]) // np.mean(self.input_shape), 1))
+
         dets = []
         # ---------------------------------------------------------#
         #   图像绘制
@@ -484,11 +481,6 @@ class YOLO(object):
             bottom = min(image.size[1], np.floor(bottom).astype('float32'))
             right = min(image.size[0], np.floor(right).astype('float32'))
 
-            label = '{} {:.2f}'.format(predicted_class, score)
-            draw = ImageDraw.Draw(image)
-            label_size = draw.textsize(label, font)
-            label = label.encode('utf-8')
-            # print(top, left, bottom, right, score)
             dets.append([top, left, bottom, right, score, int(c)])
 
         # print(dets)
