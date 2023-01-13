@@ -1,5 +1,8 @@
 import colorsys
+import os
 import time
+
+import torch
 from PIL import Image, ImageDraw, ImageFont
 
 from scipy.optimize import linear_sum_assignment
@@ -7,6 +10,7 @@ import numpy as np
 from numba import jit
 
 from CenterNet.centernet import CenterNet
+from yolov7.utils.utils import cvtColor, resize_image, preprocess_input
 from yolov7.yolo import YOLO
 
 
@@ -38,7 +42,6 @@ class ProbEn(object):
         self.colors = list(map(lambda x: colorsys.hsv_to_rgb(*x), hsv_tuples))
         self.colors = list(map(lambda x: (int(x[0] * 255), int(x[1] * 255), int(x[2] * 255)), self.colors))
 
-    @jit
     def iou(self, bb_test, bb_gt):
         """
         在两个box间计算IOU
@@ -306,7 +309,7 @@ class ProbEn(object):
                 if scores[0] >= scores[1]:
                     out_box = bboxs[0]
                     out_score = scores[0]
-                    pred_class = classes[0]
+                    pred_class = int(classes[0])
                 else:
                     out_box = bboxs[1]
                     out_score = scores[1]
@@ -382,9 +385,9 @@ class ProbEn(object):
         #   处理unmatched_detection2
         # ---------------------------------------------------#
         for index2 in unmatched_detection2:
-            out_box = boxs1[index2]
-            out_score = scores1[index2]
-            pred_class = int(classes1[index2])
+            out_box = boxs2[index2]
+            out_score = scores2[index2]
+            pred_class = int(classes2[index2])
             top, left, bottom, right = out_box
             dets.append([top, left, bottom, right, out_score, pred_class])
             # print("dets:", [top, left, bottom, right, out_score, pred_class])
@@ -402,3 +405,121 @@ class ProbEn(object):
             draw.text(text_origin, str(label, 'UTF-8'), fill=(0, 0, 0), font=font)
 
         return image
+
+    def get_map_txt(self, image_id, class_names, map_out_path, dets_1, scores_1, dets_2, scores_2):
+        f = open(os.path.join(map_out_path, "detection-results/" + image_id + ".txt"), "w", encoding='utf-8')
+        # ---------------------------------------------------#
+        #   获取ProbEn输入：
+        #   boxs：预测框
+        #   scores：置信度
+        #   classes：预测类别索引
+        # ---------------------------------------------------#
+        boxs1 = dets_1[:, :4]
+        boxs2 = dets_2[:, :4]
+
+
+        scores1 = dets_1[:, 4]
+        scores2 = dets_2[:, 4]
+
+        classes1 = dets_1[:, 5]  # 索引需要转换为int
+        classes2 = dets_2[:, 5]
+
+        # ---------------------------------------------------#
+        #   两个检测器的检测结果匹配
+        # ---------------------------------------------------#
+        matches, unmatched_detection1, unmatched_detection2 = self.associate_detections_to_trackers(boxs1, boxs2)
+
+        # ---------------------------------------------------#
+        #   ProbEn融合
+        #   只有一个检测器检测到: 直接使用结果，即绘制两个unmatched_detection，无需融合
+        #   两个检测器都检测到，但类别不同，需要在matches处理过程中判断，无需融合
+        # ---------------------------------------------------#
+
+        dets = []
+        # ---------------------------------------------------#
+        #   处理二者匹配到的目标(matches)
+        # ---------------------------------------------------#
+        for index in matches:
+            # ----------------------------#
+            #   bbox融合
+            # ----------------------------#
+            bboxs = [boxs1[index[0]], boxs2[index[1]]]
+            scores = [scores1[index[0]], scores2[index[1]]]
+            classes = [classes1[index[0]], classes2[index[1]]]
+            # ----------------------------#
+            #   两个检测器类别不同的情况
+            # ----------------------------#
+            if classes[0] != classes[1]:
+                if scores[0] >= scores[1]:
+                    out_box = bboxs[0]
+                    out_score = scores[0]
+                    pred_class = int(classes[0])
+                else:
+                    out_box = bboxs[1]
+                    out_score = scores[1]
+                    pred_class = int(classes[1])
+
+                top, left, bottom, right = out_box
+                dets.append([top, left, bottom, right, out_score, pred_class])
+                # print("dets:", [top, left, bottom, right, out_score, pred_class])
+                # print(int(pred_class))
+                if self.voc_classes[pred_class] not in class_names:
+                    continue
+                f.write("%s %s %s %s %s %s\n" % (self.voc_classes[pred_class], out_score,
+                                                 str(int(left)), str(int(top)), str(int(right)), str(int(bottom))))
+                continue
+
+            out_box = self.weighted_box_fusion(bboxs, scores)
+            # print(bboxs[0])
+            # print(out_box)
+            # ----------------------------#
+            #   置信度融合
+            # ----------------------------#
+            scores_vec = [scores_1[index[0]], scores_2[index[1]]]
+            # print(classes[0])
+            pred_class = int(classes[0])
+            # print(scores_vec[0], scores_vec[1])
+            out_score = self.bayesian_fusion_multiclass(scores_vec, pred_class)
+            # print(out_score)
+
+            top, left, bottom, right = out_box
+            dets.append([top, left, bottom, right, out_score, pred_class])
+            # print("dets:", [top, left, bottom, right, out_score, pred_class])
+            if self.voc_classes[pred_class] not in class_names:
+                continue
+            f.write("%s %s %s %s %s %s\n" % (self.voc_classes[pred_class], out_score,
+                                             str(int(left)), str(int(top)), str(int(right)), str(int(bottom))))
+
+        # ---------------------------------------------------#
+        #   处理unmatched_detection1
+        # ---------------------------------------------------#
+        for index1 in unmatched_detection1:
+            out_box = boxs1[index1]
+            out_score = scores1[index1]
+            pred_class = int(classes1[index1])
+            top, left, bottom, right = out_box
+            dets.append([top, left, bottom, right, out_score, pred_class])
+            # print("dets:", [top, left, bottom, right, out_score, pred_class])
+            if self.voc_classes[pred_class] not in class_names:
+                continue
+            f.write("%s %s %s %s %s %s\n" % (self.voc_classes[pred_class], out_score,
+                                             str(int(left)), str(int(top)), str(int(right)), str(int(bottom))))
+        # ---------------------------------------------------#
+        #   处理unmatched_detection2
+        # ---------------------------------------------------#
+        # print(boxs1)
+        # print(unmatched_detection2)
+        for index2 in unmatched_detection2:
+            out_box = boxs2[index2]
+            out_score = scores2[index2]
+            pred_class = int(classes2[index2])
+            top, left, bottom, right = out_box
+            dets.append([top, left, bottom, right, out_score, pred_class])
+            # print("dets:", [top, left, bottom, right, out_score, pred_class])
+            if self.voc_classes[pred_class] not in class_names:
+                continue
+            f.write("%s %s %s %s %s %s\n" % (self.voc_classes[pred_class], out_score,
+                                             str(int(left)), str(int(top)), str(int(right)), str(int(bottom))))
+
+        f.close()
+        return

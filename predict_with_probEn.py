@@ -12,6 +12,8 @@ from CenterNet.centernet import CenterNet
 from ProbEn import ProbEn
 from yolov7.yolo import YOLO
 
+from multiprocessing import Process
+
 if __name__ == '__main__':
     centernet = CenterNet()
     yolo = YOLO()
@@ -22,7 +24,7 @@ if __name__ == '__main__':
     #   'video'             表示视频检测，可调用摄像头或者视频进行检测，详情查看下方注释。
     #   'dir_predict'       表示遍历文件夹进行检测并保存。默认遍历img文件夹，保存img_out文件夹，详情查看下方注释。
     #----------------------------------------------------------------------------------------------------------#
-    mode = "video"
+    mode = "predict"
     # ----------------------------------------------------------------------------------------------------------#
     #   video_path          用于指定视频的路径，当video_path=0时表示检测摄像头
     #                       想要检测视频，则设置如video_path = "xxx.mp4"即可，代表读取出根目录下的xxx.mp4文件。
