@@ -14,7 +14,7 @@ if __name__ == '__main__':
     count = False
 
     # img = input('Input image filename:')
-    img = 'D:\Deep_Learning_folds\ProbEn\yolov7\img\street.jpg'
+    img = 'img/1.jpg'
     try:
         image1 = Image.open(img)
         image2 = Image.open(img)
@@ -23,16 +23,32 @@ if __name__ == '__main__':
     else:
         print("-----------------")
         print("yolov7:")
-        r_image = yolo.detect_image(image1, crop=crop, count=count)
-        r_image.show()
-        # dets_yolo, scores_yolo = yolo.detect_image_dets(image1)
+        #r_image = yolo.detect_image(image1, crop=crop, count=count)
+        #r_image.show()
+        # tact_time = yolo.get_FPS(image1, test_interval=100)
+        # print(str(tact_time) + ' seconds, ' + str(1 / tact_time) + 'FPS, @batch_size 1')
+        dets_yolo, scores_yolo = yolo.detect_image_dets(image1)
+        t1 = time.time()
+        for _ in range(100):
+            dets_yolo, scores_yolo = yolo.detect_image_dets(image1)
+        t2 = time.time()
+        tact_time = (t2 - t1) / 100
+        print(str(tact_time) + ' seconds, ' + str(1 / tact_time) + 'FPS, @batch_size 1')
         # print(dets_yolo)
         # print(scores_yolo)
 
         print("-----------------")
         print("centernet:")
-        r_image2 = centernet.detect_image(image2, crop = crop, count=count)
-        r_image2.show()
-        # dets_centernet, scores_centernet = centernet.detect_image_dets(image2)
+        # r_image2 = centernet.detect_image(image2, crop = crop, count=count)
+        # r_image2.show()
+        # tact_time = centernet.get_FPS(image2, test_interval=100)
+        # print(str(tact_time) + ' seconds, ' + str(1 / tact_time) + 'FPS, @batch_size 1')
+        dets_centernet, scores_centernet = centernet.detect_image_dets(image2)
+        t1 = time.time()
+        for _ in range(100):
+            dets_centernet, scores_centernet = centernet.detect_image_dets(image2)
+        t2 = time.time()
+        tact_time = (t2 - t1) / 100
+        print(str(tact_time) + ' seconds, ' + str(1 / tact_time) + 'FPS, @batch_size 1')
         # print(dets_centernet)
         #print(scores_centernet)

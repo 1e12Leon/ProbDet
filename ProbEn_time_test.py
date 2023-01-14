@@ -238,7 +238,7 @@ if __name__ == '__main__':
     count = False
     voc_classes = ['dog', 'person', 'cat', 'car']
     # img = input('Input image filename:')
-    img = '1.jpeg'
+    img = 'img/1.jpg'
     time_interval = 100
     interval = 0
     # ---------------------------------------------------------------------------------------------------------------#
@@ -415,7 +415,7 @@ if __name__ == '__main__':
             top, left, bottom, right = out_box
             dets.append([top, left, bottom, right, out_score, pred_class])
             # print("dets:", [top, left, bottom, right, out_score, pred_class])
-            # ----------------------------#
+            """# ----------------------------#
             #   绘制目标
             # ----------------------------#
             label = '{} {:.2f}'.format(voc_classes[pred_class], out_score)
@@ -425,7 +425,7 @@ if __name__ == '__main__':
             draw.rectangle([left + thickness, top + thickness, right - thickness, bottom - thickness],
                            outline='green', width=2)
             draw.rectangle([tuple(text_origin), tuple(text_origin + label_size)], fill='green')
-            draw.text(text_origin, str(label, 'UTF-8'), fill=(0, 0, 0), font=font)
+            draw.text(text_origin, str(label, 'UTF-8'), fill=(0, 0, 0), font=font)"""
         # image.show()
         interval += 1
     t0 = time.time()-t
