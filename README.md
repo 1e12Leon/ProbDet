@@ -11,7 +11,9 @@
 6. [参考资料 Reference](#Reference)
 
 ## Top News
-**`2023-01`**:**仓库创建，支持yolov7、CenterNet两种目标检测器**  
+**`2023-01-10`**:**仓库创建，支持yolov7、CenterNet两种目标检测器**  
+**`2023-01-14`**:**添加基于尺度不变特征和注意力机制的改进yolov7**  
+![image](https://user-images.githubusercontent.com/44053847/212449607-f7ae0beb-68f5-419e-aeba-7b8beb4fb577.png)
 
 
 ## 所需环境
