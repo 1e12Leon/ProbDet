@@ -268,7 +268,6 @@ class YOLO(object):
                 #---------------------------------------------------------#
                 results = self.bbox_util.non_max_suppression(torch.cat(outputs, 1), self.num_classes, self.input_shape, 
                             image_shape, self.letterbox_image, conf_thres=self.confidence, nms_thres=self.nms_iou)
-                            
         t2 = time.time()
         tact_time = (t2 - t1) / test_interval
         return tact_time
@@ -483,5 +482,4 @@ class YOLO(object):
 
             dets.append([top, left, bottom, right, score, int(c)])
 
-        # print(dets)
         return dets, scores

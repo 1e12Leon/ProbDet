@@ -1,18 +1,12 @@
-import colorsys
 import time
-
 import cv2
 from PIL import Image, ImageDraw, ImageFont
-
-from scipy.optimize import linear_sum_assignment
 import numpy as np
-from numba import jit
-
 from CenterNet.centernet import CenterNet
 from ProbEn import ProbEn
 from yolov7.yolo import YOLO
 
-from multiprocessing import Process
+
 
 if __name__ == '__main__':
     centernet = CenterNet()
@@ -25,7 +19,7 @@ if __name__ == '__main__':
     #   'dir_predict'       表示遍历文件夹进行检测并保存。默认遍历img文件夹，保存img_out文件夹，详情查看下方注释。
     #   'fps'               表示测试fps，使用的图片是img里面的street.jpg，详情查看下方注释。
     #----------------------------------------------------------------------------------------------------------#
-    mode = "fps"
+    mode = "dir_predict"
     # ----------------------------------------------------------------------------------------------------------#
     #   video_path          用于指定视频的路径，当video_path=0时表示检测摄像头
     #                       想要检测视频，则设置如video_path = "xxx.mp4"即可，代表读取出根目录下的xxx.mp4文件。
@@ -68,9 +62,15 @@ if __name__ == '__main__':
             scores_yolo = np.asarray(scores_yolo)
 
             dets_centernet, scores_centernet = centernet.detect_image_dets(image)
+
             dets_centernet = np.asarray(dets_centernet)
             scores_centernet = np.asarray(scores_centernet)
-            r_image = proben.fusion_image(image, dets_yolo, scores_yolo, dets_centernet, scores_centernet)
+            if len(dets_centernet) != 0 and len(dets_yolo) != 0:
+                r_image = proben.fusion_image(image, dets_yolo, scores_yolo, dets_centernet, scores_centernet)
+            elif len(dets_yolo == 0):
+                r_image = centernet.detect_image_dets(image)
+            elif len(dets_centernet == 0):
+                r_image = yolo.detect_image_dets(image)
             r_image.show()
 
     elif mode == 'video':
@@ -177,8 +177,8 @@ if __name__ == '__main__':
         img_names = os.listdir(dir_origin_path)
         for img_name in tqdm(img_names):
             if img_name.lower().endswith(('.bmp', '.dib', '.png', '.jpg', '.jpeg', '.pbm', '.pgm', '.ppm', '.tif', '.tiff')):
-                image_path  = os.path.join(dir_origin_path, img_name)
-                image       = Image.open(image_path)
+                image_path = os.path.join(dir_origin_path, img_name)
+                image = Image.open(image_path)
                 dets_yolo, scores_yolo = yolo.detect_image_dets(image)
                 dets_yolo = np.asarray(dets_yolo)
                 scores_yolo = np.asarray(scores_yolo)
@@ -186,12 +186,22 @@ if __name__ == '__main__':
                 dets_centernet, scores_centernet = centernet.detect_image_dets(image)
                 dets_centernet = np.asarray(dets_centernet)
                 scores_centernet = np.asarray(scores_centernet)
-                r_image     = proben.fusion_image(image, dets_yolo, scores_yolo, dets_centernet, scores_centernet)
+                if len(dets_centernet) != 0 and len(dets_yolo) != 0:
+                    r_image = proben.fusion_image(image, dets_yolo, scores_yolo, dets_centernet, scores_centernet)
+                elif len(dets_yolo == 0):
+                    r_image = centernet.detect_image_dets(image)
+                elif len(dets_centernet == 0):
+                    r_image = yolo.detect_image_dets(image)
+                # r_image = proben.fusion_image(image, dets_yolo, scores_yolo, dets_centernet, scores_centernet)
                 if not os.path.exists(dir_save_path):
                     os.makedirs(dir_save_path)
                 r_image.save(os.path.join(dir_save_path, img_name.replace(".jpg", ".png")), quality=95, subsampling=0)
 
     elif mode == "fps":
+        # ---------------------------------------------------------#
+        #   测试fps需要选择两个检测器都能检测到目标的图片
+        #   否则融合无意义，自然也无法得到真实的融合fps
+        # ---------------------------------------------------------#
         image = Image.open(fps_image_path)
         dets_yolo, scores_yolo = yolo.detect_image_dets(image)
         dets_yolo = np.asarray(dets_yolo)
