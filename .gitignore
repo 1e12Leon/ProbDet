@@ -1,0 +1,14 @@
+.idea/
+/CenterNet/2007_val.txt
+/CenterNet/2007_train.txt
+/CenterNet/img
+/CenterNet/img1
+/CenterNet/img_out
+/CenterNet/map_out
+detector_test/
+img_out/
+MultiprocessTest/
+/yolov7/img_out
+/yolov7/map_out
+VOCdevkit
+map_out

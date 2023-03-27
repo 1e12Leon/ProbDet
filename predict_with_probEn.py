@@ -1,0 +1,237 @@
+import time
+import cv2
+from PIL import Image, ImageDraw, ImageFont
+import numpy as np
+from CenterNet.centernet import CenterNet
+from ProbEn import ProbEn
+from yolov7.yolo import YOLO
+
+
+
+if __name__ == '__main__':
+    centernet = CenterNet()
+    yolo = YOLO()
+    proben = ProbEn()
+    #----------------------------------------------------------------------------------------------------------#
+    #   mode用于指定测试的模式：
+    #   'predict'           表示单张图片预测，如果想对预测过程进行修改，如保存图片，截取对象等，可以先看下方详细的注释
+    #   'video'             表示视频检测，可调用摄像头或者视频进行检测，详情查看下方注释。
+    #   'dir_predict'       表示遍历文件夹进行检测并保存。默认遍历img文件夹，保存img_out文件夹，详情查看下方注释。
+    #   'fps'               表示测试fps，使用的图片是img里面的street.jpg，详情查看下方注释。
+    #----------------------------------------------------------------------------------------------------------#
+    mode = "dir_predict"
+    # ----------------------------------------------------------------------------------------------------------#
+    #   video_path          用于指定视频的路径，当video_path=0时表示检测摄像头
+    #                       想要检测视频，则设置如video_path = "xxx.mp4"即可，代表读取出根目录下的xxx.mp4文件。
+    #   video_save_path     表示视频保存的路径，当video_save_path=""时表示不保存
+    #                       想要保存视频，则设置如video_save_path = "yyy.mp4"即可，代表保存为根目录下的yyy.mp4文件。
+    #   video_fps           用于保存的视频的fps
+    #
+    #   video_path、video_save_path和video_fps仅在mode='video'时有效
+    #   保存视频时需要ctrl+c退出或者运行到最后一帧才会完成完整的保存步骤。
+    # ----------------------------------------------------------------------------------------------------------#
+    video_path = "img/4_Trim.mp4"
+    video_save_path = "img_out/4_Trim.mp4"
+    video_fps = 25.0
+    # -------------------------------------------------------------------------#
+    #   dir_origin_path     指定了用于检测的图片的文件夹路径
+    #   dir_save_path       指定了检测完图片的保存路径
+    #
+    #   dir_origin_path和dir_save_path仅在mode='dir_predict'时有效
+    # -------------------------------------------------------------------------#
+    dir_origin_path =r"D:\KAIST数据集\重新标注的kaist\kaist_wash_picture_test\lwir"
+    dir_save_path = "img_out/T_new_confi0.3nms0.3/"
+    #----------------------------------------------------------------------------------------------------------#
+    #   test_interval       用于指定测量fps的时候，图片检测的次数。理论上test_interval越大，fps越准确。
+    #   fps_image_path      用于指定测试的fps图片
+    #
+    #   test_interval和fps_image_path仅在mode='fps'有效
+    #----------------------------------------------------------------------------------------------------------#
+    test_interval   = 100
+    fps_image_path  = "img/1.jpg"
+
+    if mode == 'predict':
+        while True:
+            img = input('Input image filename:')
+            try:
+                image = Image.open(img)
+            except:
+                print('Open Error! Try again!')
+            else:
+                dets_yolo, scores_yolo = yolo.detect_image_dets(image)
+                dets_yolo = np.asarray(dets_yolo)
+                scores_yolo = np.asarray(scores_yolo)
+
+                dets_centernet, scores_centernet = centernet.detect_image_dets(image)
+                dets_centernet = np.asarray(dets_centernet)
+                scores_centernet = np.asarray(scores_centernet)
+
+                # if len(dets_centernet) != 0 and len(dets_yolo) != 0:
+                #     r_image = proben.fusion_image(image, dets_yolo, scores_yolo, dets_centernet, scores_centernet)
+                # elif len(dets_yolo == 0):
+                #     r_image = centernet.detect_image_dets(image)
+                # elif len(dets_centernet == 0):
+                #     r_image = yolo.detect_image_dets(image)
+
+                r_image = proben.fusion_image(image, dets_yolo, scores_yolo, dets_centernet, scores_centernet)
+                r_image.show()
+
+    elif mode == 'video':
+        capture = cv2.VideoCapture(video_path)
+        if video_save_path != "":
+            fourcc = cv2.VideoWriter_fourcc(*'XVID')
+            size = (int(capture.get(cv2.CAP_PROP_FRAME_WIDTH)), int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT)))
+            out = cv2.VideoWriter(video_save_path, fourcc, video_fps, size)
+
+        ref, frame = capture.read()
+        if not ref:
+            raise ValueError("未能正确读取摄像头（视频），请注意是否正确安装摄像头（是否正确填写视频路径）。")
+
+        fps = 0.0
+        while (True):
+            t1 = time.time()
+            # 读取某一帧
+            ref, frame = capture.read()
+            if not ref:
+                break
+            # 格式转变，BGRtoRGB
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            # 转变成Image
+            frame = Image.fromarray(np.uint8(frame))
+            # 进行检测
+            dets_yolo, scores_yolo = yolo.detect_image_dets(frame)
+            dets_centernet, scores_centernet = centernet.detect_image_dets(frame)
+
+            if len(dets_yolo) == 0 and len(dets_centernet) == 0:
+                print("无目标")
+                frame = np.array(frame)
+                frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+
+                fps = (fps + (1. / (time.time() - t1))) / 2
+                print("fps= %.2f" % (fps))
+                frame = cv2.putText(frame, "fps= %.2f" % (fps), (0, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+
+                cv2.imshow("video", frame)
+                c = cv2.waitKey(1) & 0xff
+                if video_save_path != "":
+                    out.write(frame)
+                continue
+            elif len(dets_centernet) == 0:
+                frame = np.array(yolo.detect_image(frame))
+                frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+
+                fps = (fps + (1. / (time.time() - t1))) / 2
+                print("fps= %.2f" % (fps))
+                frame = cv2.putText(frame, "fps= %.2f" % (fps), (0, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+
+                cv2.imshow("video", frame)
+                c = cv2.waitKey(1) & 0xff
+                if video_save_path != "":
+                    out.write(frame)
+                continue
+            elif len(dets_yolo) == 0:
+                frame = np.array(centernet.detect_image(frame))
+                frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+
+                fps = (fps + (1. / (time.time() - t1))) / 2
+                print("fps= %.2f" % (fps))
+                frame = cv2.putText(frame, "fps= %.2f" % (fps), (0, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+
+                cv2.imshow("video", frame)
+                c = cv2.waitKey(1) & 0xff
+                if video_save_path != "":
+                    out.write(frame)
+                continue
+            dets_yolo = np.asarray(dets_yolo)
+            scores_yolo = np.asarray(scores_yolo)
+
+            dets_centernet = np.asarray(dets_centernet)
+            scores_centernet = np.asarray(scores_centernet)
+            frame = np.array(proben.fusion_image(frame, dets_yolo, scores_yolo, dets_centernet, scores_centernet))
+            # frame = np.array(yolo.detect_image(frame))
+            # RGBtoBGR满足opencv显示格式
+            frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+
+            fps = (fps + (1. / (time.time() - t1))) / 2
+            print("fps= %.2f" % (fps))
+            frame = cv2.putText(frame, "fps= %.2f" % (fps), (0, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+
+            cv2.imshow("video", frame)
+            c = cv2.waitKey(1) & 0xff
+            if video_save_path != "":
+                out.write(frame)
+
+            if c == 27:
+                capture.release()
+                break
+
+        print("Video Detection Done!")
+        capture.release()
+        if video_save_path != "":
+            print("Save processed video to the path :" + video_save_path)
+            out.release()
+        cv2.destroyAllWindows()
+
+    elif mode == "dir_predict":
+        import os
+
+        from tqdm import tqdm
+
+        img_names = os.listdir(dir_origin_path)
+        for img_name in tqdm(img_names):
+            if img_name.lower().endswith(('.bmp', '.dib', '.png', '.jpg', '.jpeg', '.pbm', '.pgm', '.ppm', '.tif', '.tiff')):
+                image_path = os.path.join(dir_origin_path, img_name)
+                image = Image.open(image_path)
+                dets_yolo, scores_yolo = yolo.detect_image_dets(image)
+                dets_yolo = np.asarray(dets_yolo)
+                scores_yolo = np.asarray(scores_yolo)
+
+                dets_centernet, scores_centernet = centernet.detect_image_dets(image)
+                dets_centernet = np.asarray(dets_centernet)
+                scores_centernet = np.asarray(scores_centernet)
+
+                # if len(dets_centernet) != 0 and len(dets_yolo) != 0:
+                #     r_image = proben.fusion_image(image, dets_yolo, scores_yolo, dets_centernet, scores_centernet)
+                # elif len(dets_yolo == 0):
+                #     r_image = centernet.detect_image_dets(image)
+                # elif len(dets_centernet == 0):
+                #     r_image = yolo.detect_image_dets(image)
+
+                r_image = proben.fusion_image(image, dets_yolo, scores_yolo, dets_centernet, scores_centernet)
+                if not os.path.exists(dir_save_path):
+                    os.makedirs(dir_save_path)
+                r_image.save(os.path.join(dir_save_path, img_name.replace(".jpg", ".png")), quality=95, subsampling=0)
+
+    elif mode == "fps":
+        # ---------------------------------------------------------#
+        #   测试fps需要选择两个检测器都能检测到目标的图片,这样才能得到的融合fps
+        #   若只有一个检测器检测到时，此时变成单个检测器的fps测试
+        # ---------------------------------------------------------#
+        # ---------------------------------------------------------#
+        #   测试fps需要选择两个检测器都能检测到目标的图片
+        #   否则融合无意义，自然也无法得到真实的融合fps
+        # ---------------------------------------------------------#
+        image = Image.open(fps_image_path)
+        dets_yolo, scores_yolo = yolo.detect_image_dets(image)
+        dets_yolo = np.asarray(dets_yolo)
+        scores_yolo = np.asarray(scores_yolo)
+
+        dets_centernet, scores_centernet = centernet.detect_image_dets(image)
+        dets_centernet = np.asarray(dets_centernet)
+        scores_centernet = np.asarray(scores_centernet)
+        r_image = proben.fusion_image(image, dets_yolo, scores_yolo, dets_centernet, scores_centernet)
+
+        t1 = time.time()
+        for _ in range(test_interval):
+            dets_yolo, scores_yolo = yolo.detect_image_dets(image)
+            dets_yolo = np.asarray(dets_yolo)
+            scores_yolo = np.asarray(scores_yolo)
+
+            dets_centernet, scores_centernet = centernet.detect_image_dets(image)
+            dets_centernet = np.asarray(dets_centernet)
+            scores_centernet = np.asarray(scores_centernet)
+            r_image = proben.get_FPS(dets_yolo, scores_yolo, dets_centernet, scores_centernet)
+
+        t2 = time.time()
+        tact_time = (t2 - t1) / test_interval
+        print(str(tact_time) + ' seconds, ' + str(1 / tact_time) + 'FPS, @batch_size 1')
