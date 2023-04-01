@@ -65,12 +65,13 @@ if __name__ == '__main__':
 
             dets_centernet = np.asarray(dets_centernet)
             scores_centernet = np.asarray(scores_centernet)
-            if len(dets_centernet) != 0 and len(dets_yolo) != 0:
-                r_image = proben.fusion_image(image, dets_yolo, scores_yolo, dets_centernet, scores_centernet)
-            elif len(dets_yolo == 0):
-                r_image = centernet.detect_image_dets(image)
-            elif len(dets_centernet == 0):
-                r_image = yolo.detect_image_dets(image)
+            # if len(dets_centernet) != 0 and len(dets_yolo) != 0:
+            #     r_image = proben.fusion_image(image, dets_yolo, scores_yolo, dets_centernet, scores_centernet)
+            # elif len(dets_yolo == 0):
+            #     r_image = centernet.detect_image_dets(image)
+            # elif len(dets_centernet == 0):
+            #     r_image = yolo.detect_image_dets(image)
+            r_image = proben.fusion_image(image, dets_yolo, scores_yolo, dets_centernet, scores_centernet)
             r_image.show()
 
     elif mode == 'video':
@@ -186,13 +187,13 @@ if __name__ == '__main__':
                 dets_centernet, scores_centernet = centernet.detect_image_dets(image)
                 dets_centernet = np.asarray(dets_centernet)
                 scores_centernet = np.asarray(scores_centernet)
-                if len(dets_centernet) != 0 and len(dets_yolo) != 0:
-                    r_image = proben.fusion_image(image, dets_yolo, scores_yolo, dets_centernet, scores_centernet)
-                elif len(dets_yolo == 0):
-                    r_image = centernet.detect_image_dets(image)
-                elif len(dets_centernet == 0):
-                    r_image = yolo.detect_image_dets(image)
-                # r_image = proben.fusion_image(image, dets_yolo, scores_yolo, dets_centernet, scores_centernet)
+                # if len(dets_centernet) != 0 and len(dets_yolo) != 0:
+                #     r_image = proben.fusion_image(image, dets_yolo, scores_yolo, dets_centernet, scores_centernet)
+                # elif len(dets_yolo == 0):
+                #     r_image = centernet.detect_image_dets(image)
+                # elif len(dets_centernet == 0):
+                #     r_image = yolo.detect_image_dets(image)
+                r_image = proben.fusion_image(image, dets_yolo, scores_yolo, dets_centernet, scores_centernet)
                 if not os.path.exists(dir_save_path):
                     os.makedirs(dir_save_path)
                 r_image.save(os.path.join(dir_save_path, img_name.replace(".jpg", ".png")), quality=95, subsampling=0)

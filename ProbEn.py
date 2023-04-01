@@ -7,7 +7,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 from scipy.optimize import linear_sum_assignment
 import numpy as np
-from numba import jit
+#from numba import jit
 
 from CenterNet.centernet import CenterNet
 from yolov7.utils.utils import cvtColor, resize_image, preprocess_input
@@ -34,6 +34,8 @@ class ProbEn(object):
             setattr(self, name, value)
             self._defaults[name] = value
         self.voc_classes = ['dog', 'person', 'cat', 'car']
+        #KAIST数据集只有person类
+        #self.voc_classes = ['person']
         self.num_classes = len(self.voc_classes)
         # ---------------------------------------------------#
         #   画框设置不同的颜色
@@ -116,7 +118,8 @@ class ProbEn(object):
             新增目标的矩阵：unmatched_detections 为 np.arange(len(detections))
             跟踪失败即离开画面的目标矩阵：unmatched_trackers 为 np.empty((0, 5), dtype=int)
             """
-            return np.empty((0, 2), dtype=int), np.arange(len(detections)), np.empty((0, 5), dtype=int)
+            # return np.empty((0, 2), dtype=int), np.arange(len(detections)), np.empty((0, 5), dtype=int)
+            return np.empty((0, 2), dtype=int), np.arange(len(detections)), np.arange(len(trackers))
 
         """ 因为要计算所有检测结果框中每个框 和 所有跟踪目标框中每个框 两两之间 的iou相似度计算，
             即所有检测结果框中每个框 都要和 所有跟踪目标框中每个框 进行两两之间 的iou相似度计算，
@@ -271,14 +274,32 @@ class ProbEn(object):
         #   scores：置信度
         #   classes：预测类别索引
         # ---------------------------------------------------#
-        boxs1 = dets_1[:, :4]
-        boxs2 = dets_2[:, :4]
+        # ---------------------------------------------------#
+        #   dets_1和scores_1为yolo的检测结果和各类的概率
+        #   dets的形式：[[top  left  bottom  right  score  预测为第几类的索引],
+        #               ...
+        #               [top  left  bottom  right  score  预测为第几类的索引]]
+        #   scores的形式：[[第一类的概率  第二类的概率  第三类的概率  第n类的概率],
+        #               ...
+        #                 [第一类的概率  第二类的概率  第三类的概率  第n类的概率]]
+        # ---------------------------------------------------#
 
-        scores1 = dets_1[:, 4]
-        scores2 = dets_2[:, 4]
-
-        classes1 = dets_1[:, 5]  # 索引需要转换为int
-        classes2 = dets_2[:, 5]
+        if(len(dets_1)==0):
+            boxs1 = []
+            scores1 = []
+            classes1 = []
+        else:
+            boxs1 = dets_1[:, :4]
+            scores1 = dets_1[:, 4]
+            classes1 = dets_1[:, 5] # 索引需要转换为int
+        if(len(dets_2)==0):
+            boxs2 = []
+            scores2 = []
+            classes2 = []
+        else:
+            boxs2 = dets_2[:, :4]
+            scores2 = dets_2[:, 4]
+            classes2 = dets_2[:, 5] # 索引需要转换为int
 
         # ---------------------------------------------------#
         #   两个检测器的检测结果匹配
@@ -414,15 +435,22 @@ class ProbEn(object):
         #   scores：置信度
         #   classes：预测类别索引
         # ---------------------------------------------------#
-        boxs1 = dets_1[:, :4]
-        boxs2 = dets_2[:, :4]
-
-
-        scores1 = dets_1[:, 4]
-        scores2 = dets_2[:, 4]
-
-        classes1 = dets_1[:, 5]  # 索引需要转换为int
-        classes2 = dets_2[:, 5]
+        if(len(dets_1)==0):
+            boxs1 = []
+            scores1 = []
+            classes1 = []
+        else:
+            boxs1 = dets_1[:, :4]
+            scores1 = dets_1[:, 4]
+            classes1 = dets_1[:, 5] # 索引需要转换为int
+        if(len(dets_2)==0):
+            boxs2 = []
+            scores2 = []
+            classes2 = []
+        else:
+            boxs2 = dets_2[:, :4]
+            scores2 = dets_2[:, 4]
+            classes2 = dets_2[:, 5] # 索引需要转换为int
 
         # ---------------------------------------------------#
         #   两个检测器的检测结果匹配
@@ -531,14 +559,22 @@ class ProbEn(object):
         #   scores：置信度
         #   classes：预测类别索引
         # ---------------------------------------------------#
-        boxs1 = dets_1[:, :4]
-        boxs2 = dets_2[:, :4]
-
-        scores1 = dets_1[:, 4]
-        scores2 = dets_2[:, 4]
-
-        classes1 = dets_1[:, 5]  # 索引需要转换为int
-        classes2 = dets_2[:, 5]
+        if(len(dets_1)==0):
+            boxs1 = []
+            scores1 = []
+            classes1 = []
+        else:
+            boxs1 = dets_1[:, :4]
+            scores1 = dets_1[:, 4]
+            classes1 = dets_1[:, 5] # 索引需要转换为int
+        if(len(dets_2)==0):
+            boxs2 = []
+            scores2 = []
+            classes2 = []
+        else:
+            boxs2 = dets_2[:, :4]
+            scores2 = dets_2[:, 4]
+            classes2 = dets_2[:, 5] # 索引需要转换为int
 
         # ---------------------------------------------------#
         #   两个检测器的检测结果匹配
