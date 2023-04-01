@@ -147,6 +147,11 @@ class ProbEn(object):
                 row_ind：[0 1 2 3]。col_ind列索引：[3 2 1 0]。
                 np.array(list(zip(*result)))：[[0 3] [1 2] [2 1] [3 0]]
         """
+        iou_matrix = np.asarray(iou_matrix)
+        nan = np.isnan(iou_matrix).any()
+        if nan:
+            iou_matrix[np.isnan(iou_matrix)] = 0
+
         # 通过匈牙利算法将跟踪框和检测框以[[d,t]...]的二维矩阵的形式存储在match_indices中
         result = linear_sum_assignment(-iou_matrix)
         matched_indices = np.array(list(zip(*result)))
